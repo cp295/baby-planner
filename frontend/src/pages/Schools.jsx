@@ -1,34 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Heart, MapPin, Phone, ExternalLink, Star } from "lucide-react";
-import api from "../api/client.js";
+import { useLocalStorage } from "../hooks/useLocalStorage.js";
+import { SCHOOLS } from "../data/schools.js";
 
-const TYPE_LABELS = {
-  daycare: "👶 Daycare",
-  preschool: "🎨 Preschool",
-  elementary: "🏫 Elementary",
-  middle: "📚 Middle School",
-  high: "🎓 High School",
-};
-
+const TYPE_LABELS = { daycare: "👶 Daycare", preschool: "🎨 Preschool", elementary: "🏫 Elementary", middle: "📚 Middle School", high: "🎓 High School" };
 const TYPE_ORDER = ["daycare", "preschool", "elementary", "middle", "high"];
-
-const TYPE_COLORS = {
-  daycare: "bg-pink-100 text-pink-700",
-  preschool: "bg-orange-100 text-orange-700",
-  elementary: "bg-amber-100 text-amber-700",
-  middle: "bg-blue-100 text-blue-700",
-  high: "bg-purple-100 text-purple-700",
-};
+const TYPE_COLORS = { daycare: "bg-pink-100 text-pink-700", preschool: "bg-orange-100 text-orange-700", elementary: "bg-amber-100 text-amber-700", middle: "bg-blue-100 text-blue-700", high: "bg-purple-100 text-purple-700" };
 
 function Stars({ rating }) {
   if (!rating) return null;
   return (
     <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star
-          key={s}
-          className={`w-3.5 h-3.5 ${s <= Math.round(rating) ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200"}`}
-        />
+      {[1,2,3,4,5].map((s) => (
+        <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(rating) ? "text-amber-400 fill-amber-400" : "text-slate-200 fill-slate-200"}`} />
       ))}
       <span className="text-xs text-slate-500 ml-0.5">{rating.toFixed(1)}</span>
     </div>
@@ -36,23 +20,15 @@ function Stars({ rating }) {
 }
 
 export default function Schools() {
-  const [schools, setSchools] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useLocalStorage("schoolFavorites", {});
   const [activeType, setActiveType] = useState("all");
   const [favOnly, setFavOnly] = useState(false);
 
-  useEffect(() => {
-    api.get("/schools/").then((r) => { setSchools(r.data); setLoading(false); });
-  }, []);
+  const toggleFav = (id) => setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const toggleFav = async (school) => {
-    const updated = await api.patch(`/schools/${school.id}`, { is_favorited: !school.is_favorited });
-    setSchools((prev) => prev.map((s) => (s.id === school.id ? updated.data : s)));
-  };
-
-  const filtered = schools
+  const filtered = SCHOOLS
     .filter((s) => activeType === "all" || s.type === activeType)
-    .filter((s) => !favOnly || s.is_favorited);
+    .filter((s) => !favOnly || favorites[s.id]);
 
   const grouped = {};
   TYPE_ORDER.forEach((t) => {
@@ -60,40 +36,24 @@ export default function Schools() {
     if (g.length) grouped[t] = g;
   });
 
-  if (loading) return <div className="text-center py-20 text-slate-400">Loading...</div>;
-
   return (
     <div className="space-y-5">
       <div className="card">
         <h1 className="text-2xl font-bold text-slate-800">🏫 Schools & Daycares</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Near 3280 W Hayward Pl, Denver CO 80211 · Berkeley / Highlands Neighborhood</p>
-
+        <p className="text-slate-500 text-sm mt-0.5">Near 3280 W Hayward Pl, Denver CO 80211 · Berkeley / Highlands</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            onClick={() => setActiveType("all")}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeType === "all" ? "bg-purple-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
+          <button onClick={() => setActiveType("all")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${activeType === "all" ? "bg-purple-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
             All
           </button>
           {TYPE_ORDER.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActiveType(t)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                activeType === t ? "bg-purple-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
+            <button key={t} onClick={() => setActiveType(t)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${activeType === t ? "bg-purple-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
               {TYPE_LABELS[t]}
             </button>
           ))}
-          <button
-            onClick={() => setFavOnly((f) => !f)}
-            className={`ml-auto px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${
-              favOnly ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
+          <button onClick={() => setFavOnly((f) => !f)}
+            className={`ml-auto px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-1.5 transition-colors ${favOnly ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
             <Heart className={`w-3.5 h-3.5 ${favOnly ? "fill-red-500 text-red-500" : ""}`} />
             Favorites
           </button>
@@ -102,36 +62,20 @@ export default function Schools() {
 
       {Object.entries(grouped).map(([type, list]) => (
         <div key={type}>
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">
-            {TYPE_LABELS[type]} ({list.length})
-          </h2>
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2 px-1">{TYPE_LABELS[type]} ({list.length})</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {list.map((school) => (
               <div key={school.id} className="card hover:shadow-md transition-shadow relative">
-                {/* Favorite button */}
-                <button
-                  className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
-                  onClick={() => toggleFav(school)}
-                  title={school.is_favorited ? "Remove favorite" : "Add to favorites"}
-                >
-                  <Heart
-                    className={`w-5 h-5 transition-colors ${
-                      school.is_favorited ? "fill-red-500 text-red-500" : "text-slate-300 hover:text-red-400"
-                    }`}
-                  />
+                <button className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 transition-colors" onClick={() => toggleFav(school.id)}>
+                  <Heart className={`w-5 h-5 transition-colors ${favorites[school.id] ? "fill-red-500 text-red-500" : "text-slate-300 hover:text-red-400"}`} />
                 </button>
 
                 <div className="pr-10">
                   <div className="flex items-start gap-2 flex-wrap mb-1">
                     <span className={`badge ${TYPE_COLORS[school.type]}`}>{TYPE_LABELS[school.type]}</span>
-                    {school.monthly_cost_min === 0 && school.monthly_cost_max === 0 && (
-                      <span className="badge bg-green-100 text-green-700">Free (Public)</span>
-                    )}
-                    {school.waitlist_months && school.waitlist_months > 6 && (
-                      <span className="badge bg-red-100 text-red-700">Long waitlist</span>
-                    )}
+                    {school.monthly_cost_min === 0 && <span className="badge bg-green-100 text-green-700">Free (Public)</span>}
+                    {school.waitlist_months > 6 && <span className="badge bg-red-100 text-red-700">Long waitlist</span>}
                   </div>
-
                   <h3 className="font-bold text-slate-800 text-base mt-1">{school.name}</h3>
                   <Stars rating={school.rating} />
                 </div>
@@ -141,9 +85,7 @@ export default function Schools() {
                     <div className="flex items-start gap-2 text-slate-600">
                       <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-400" />
                       <span>{school.address}</span>
-                      {school.distance_miles && (
-                        <span className="text-xs text-slate-400 flex-shrink-0">({school.distance_miles} mi)</span>
-                      )}
+                      <span className="text-xs text-slate-400 flex-shrink-0">({school.distance_miles} mi)</span>
                     </div>
                   )}
                   {school.phone && (
@@ -166,31 +108,27 @@ export default function Schools() {
                   <div>
                     <p className="text-xs text-slate-400">Cost/Month</p>
                     <p className="font-semibold text-slate-700 text-sm">
-                      {school.monthly_cost_min === 0 && school.monthly_cost_max === 0
-                        ? "Free"
+                      {school.monthly_cost_min === 0 && school.monthly_cost_max === 0 ? "Free"
                         : `$${school.monthly_cost_min?.toLocaleString()}–$${school.monthly_cost_max?.toLocaleString()}`}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-400">Waitlist</p>
-                    <p className={`font-semibold text-sm ${(school.waitlist_months ?? 0) > 6 ? "text-red-600" : "text-slate-700"}`}>
+                    <p className={`font-semibold text-sm ${school.waitlist_months > 6 ? "text-red-600" : "text-slate-700"}`}>
                       {school.waitlist_months ? `${school.waitlist_months} mo` : "None"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-slate-400">Ages</p>
                     <p className="font-semibold text-slate-700 text-sm">
-                      {school.enrollment_age_min ?? "—"}
-                      {school.enrollment_age_max ? `–${school.enrollment_age_max}` : "+"}
+                      {school.enrollment_age_min}–{school.enrollment_age_max}
                       {school.type === "daycare" || school.type === "preschool" ? " mo" : " yr"}
                     </p>
                   </div>
                 </div>
 
                 {school.notes && (
-                  <p className="mt-3 text-xs text-slate-500 leading-relaxed border-t border-slate-50 pt-3">
-                    {school.notes}
-                  </p>
+                  <p className="mt-3 text-xs text-slate-500 leading-relaxed border-t border-slate-50 pt-3">{school.notes}</p>
                 )}
               </div>
             ))}
